@@ -734,7 +734,9 @@ class CircleSurvivalGame {
     const targetX = this.player.x + (Math.random() - 0.5) * aimSlop;
     const targetY = this.player.y + (Math.random() - 0.5) * aimSlop;
     const angle = Math.atan2(targetY - startY, targetX - startX);
-    const speed = 2.4 + Math.min(4.6, this.survivalTime * 0.055);
+    // Player terminal speed is accel/(1-friction) = 6.0, so the cap here sets
+    // how much room you have to outrun a rock rather than only dodge it.
+    const speed = 1.5 + Math.min(3.0, this.survivalTime * 0.034);
 
     const typeRoll = Math.random();
     let type = 'meteor';
@@ -1617,10 +1619,10 @@ class CircleSurvivalGame {
 
       if (h.type === 'seeker') {
         const targetAngle = Math.atan2(this.player.y - h.y, this.player.x - h.x);
-        h.vx += Math.cos(targetAngle) * 0.12 * dt;
-        h.vy += Math.sin(targetAngle) * 0.12 * dt;
+        h.vx += Math.cos(targetAngle) * 0.08 * dt;
+        h.vy += Math.sin(targetAngle) * 0.08 * dt;
         const curSSq = h.vx * h.vx + h.vy * h.vy;
-        const maxS = 4.0;
+        const maxS = 3.0;
         if (curSSq > maxS * maxS) {
           const curS = Math.sqrt(curSSq);
           h.vx = (h.vx / curS) * maxS;
