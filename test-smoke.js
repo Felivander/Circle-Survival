@@ -147,6 +147,46 @@ guard = 0;
 while (g.storm && guard++ < 4000) g.updateStorm(1);
 assert.ok(guard < 4000, 'storm stalled when its targets were removed');
 
+// ---- hull tint: floods on pickup, fades, and the 10th holds far longer ----
+g.startNewGame();
+g.player.invuln = 999999;
+assert.strictEqual(g.tint, 0, 'hull starts tinted');
+
+// Eat one orb by walking the player onto it.
+g.energyOrbs = [];
+g.spawnEnergyOrb();
+g.energyOrbs[0].x = g.player.x;
+g.energyOrbs[0].y = g.player.y;
+g.hazards = [];
+g.update(1);
+assert.strictEqual(g.tint, 1, 'pickup did not flood the hull');
+assert.strictEqual(g.tintHold, 0, 'a normal pickup should not hold');
+const tintAfterOne = g.tintColor;
+
+// It must actually bleed away on its own.
+for (let i = 0; i < 400; i++) { g.hazards = []; g.update(1); }
+assert.strictEqual(g.tint, 0, 'hull tint never faded back to white');
+
+// The tenth orb holds, and holds longer than a normal pickup lasts.
+g.startNewGame();
+g.player.invuln = 999999;
+g.orbCharge = 9;
+g.hazards = [];
+g.energyOrbs = [];
+g.spawnEnergyOrb();
+g.energyOrbs[0].x = g.player.x;
+g.energyOrbs[0].y = g.player.y;
+g.update(1);
+assert.ok(g.storm, 'tenth orb did not fire the storm');
+assert.strictEqual(g.tint, 1, 'tenth orb did not flood the hull');
+assert.ok(g.tintHold > 100, `tenth orb hold too short: ${g.tintHold}`);
+assert.notStrictEqual(tintAfterOne, undefined);
+
+// While held, the tint must not decay at all.
+const heldBefore = g.tint;
+for (let i = 0; i < 60; i++) { g.hazards = []; g.update(1); }
+assert.strictEqual(g.tint, heldBefore, 'tint decayed while it was supposed to hold');
+
 // ---- every boss kind spawns, takes damage from the shared path, and dies ----
 for (const kind of ['ring', 'pulsar', 'matrix']) {
   g.startNewGame();

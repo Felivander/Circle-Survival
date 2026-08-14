@@ -197,7 +197,7 @@ class SurvivalEngine {
         y: y + (Math.random() - 0.5) * 4,
         vx: Math.cos(angle) * speed,
         vy: Math.sin(angle) * speed,
-        size: Math.random() < 0.6 ? 2 : (Math.random() < 0.7 ? 3 : 4),
+        size: Math.random() < 0.6 ? 1 : (Math.random() < 0.7 ? 2 : 3),
         ramp: ramp,
         // Fast sparks start hotter and cool later.
         heat: -roll * 0.25,
@@ -228,7 +228,7 @@ class SurvivalEngine {
         vx: Math.cos(angle) * speed,
         vy: Math.sin(angle) * speed,
         len: 14 + Math.random() * 26,
-        width: 1 + Math.random() * 2,
+        width: 0.75 + Math.random() * 1.0,
         ramp: ramp,
         life: 1.0,
         decay: 0.055 + Math.random() * 0.04
@@ -287,7 +287,7 @@ class SurvivalEngine {
         y: y + (Math.random() - 0.5) * 6,
         vx: Math.cos(angle) * speed,
         vy: Math.sin(angle) * speed,
-        size: Math.random() < 0.55 ? 2 : 3,
+        size: Math.random() < 0.55 ? 1 : 2,
         ramp: BOLT_PALETTE,
         heat: -roll * 0.3,
         life: 1.0,
@@ -306,7 +306,7 @@ class SurvivalEngine {
         vx: Math.cos(angle) * speed,
         vy: Math.sin(angle) * speed,
         len: 26 + Math.random() * 40,
-        width: 1 + Math.random() * 2,
+        width: 0.75 + Math.random() * 1.25,
         ramp: BOLT_PALETTE,
         life: 1.0,
         decay: 0.05 + Math.random() * 0.035
@@ -327,7 +327,7 @@ class SurvivalEngine {
         y: y + (Math.random() - 0.5) * 8,
         vx: Math.cos(angle) * speed,
         vy: Math.sin(angle) * speed,
-        size: Math.random() < 0.5 ? 2 : (Math.random() < 0.8 ? 3 : 5),
+        size: Math.random() < 0.5 ? 1 : (Math.random() < 0.8 ? 2 : 3),
         ramp: FIRE_PALETTE,
         heat: -roll * 0.3,
         life: 1.0,
@@ -339,7 +339,7 @@ class SurvivalEngine {
     this.spawnStreaks(x, y, 22, FIRE_PALETTE, 5.0);
   }
 
-  spawnShockwave(x, y, maxRadius = 90, color = '#ffffff', thickness = 3) {
+  spawnShockwave(x, y, maxRadius = 90, color = '#ffffff', thickness = 2) {
     this.shockwaves.push({
       x: x,
       y: y,
@@ -401,7 +401,7 @@ class SurvivalEngine {
     this.electricArcs.push({
       branches: branches,
       color: pickColor(color),
-      width: o.width || 2,
+      width: o.width || 1,
       life: 1.0,
       decay: o.decay || 0.14
     });
@@ -451,9 +451,9 @@ class SurvivalEngine {
       const c = sw.ramp ? rampColor(sw.ramp, sw.life, 0) : sw.color;
 
       // Soft wide halo under the ring.
-      ctx.globalAlpha = sw.life * 0.18;
+      ctx.globalAlpha = sw.life * 0.15;
       ctx.strokeStyle = c;
-      ctx.lineWidth = sw.thickness * 3;
+      ctx.lineWidth = sw.thickness * 1.8;
       ctx.beginPath();
       ctx.arc(sw.x, sw.y, sw.radius, 0, Math.PI * 2);
       ctx.stroke();
@@ -462,7 +462,7 @@ class SurvivalEngine {
       // stay a consistent size instead of spreading out as the ring grows.
       ctx.globalAlpha = sw.life;
       ctx.fillStyle = c;
-      const block = Math.max(2, sw.thickness * 2) | 0;
+      const block = Math.max(1, Math.round(sw.thickness * 0.9));
       const steps = Math.max(12, Math.floor((Math.PI * 2 * sw.radius) / block));
       for (let s = 0; s < steps; s++) {
         const a = (s / steps) * Math.PI * 2;
@@ -510,8 +510,8 @@ class SurvivalEngine {
       // core stamped as squares along the path so the bolt reads as pixel art.
       ctx.strokeStyle = arc.color;
       for (let pass = 0; pass < 2; pass++) {
-        ctx.globalAlpha = pass === 0 ? arc.life * 0.20 : arc.life * 0.55;
-        ctx.lineWidth = pass === 0 ? arc.width * 8 : arc.width * 3;
+        ctx.globalAlpha = pass === 0 ? arc.life * 0.16 : arc.life * 0.45;
+        ctx.lineWidth = pass === 0 ? arc.width * 3.5 : arc.width * 1.4;
         for (let b = 0; b < arc.branches.length; b++) {
           const pts = arc.branches[b];
           ctx.beginPath();
@@ -524,7 +524,7 @@ class SurvivalEngine {
       // Pixel core: march each segment and stamp blocks.
       ctx.globalAlpha = arc.life;
       ctx.fillStyle = arc.color;
-      const bs = Math.max(2, arc.width) | 0;
+      const bs = Math.max(1, Math.round(arc.width * 0.55));
       for (let b = 0; b < arc.branches.length; b++) {
         const pts = arc.branches[b];
         for (let p = 1; p < pts.length; p++) {
@@ -567,8 +567,8 @@ class SurvivalEngine {
       if (c !== last) { ctx.fillStyle = c; last = c; }
       // Shrink as it cools: a spark that holds full size until it vanishes
       // reads as a dot switching off, not as something burning out.
-      let s = (p.size * (0.5 + p.life * 0.6)) | 0;
-      if (s < 2) s = 2;
+      let s = Math.round(p.size * (0.5 + p.life * 0.6));
+      if (s < 1) s = 1;
       ctx.fillRect(Math.floor(p.x), Math.floor(p.y), s, s);
     }
     ctx.restore();

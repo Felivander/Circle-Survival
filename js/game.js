@@ -69,6 +69,19 @@ class CircleSurvivalGame {
     this.overdriveMax = 420;   // ~7s
     this.runOverdrives = 0;
 
+    // Hull tint. Each orb floods the shell with colour that then bleeds back
+    // to white, so how lit-up you are IS the charge meter - the HUD pips are
+    // just a readout of something you can already feel.
+    this.tint = 0;          // 0..1 intensity
+    this.tintHold = 0;      // frames to hold at full before decaying
+    this.tintColor = '#ffffff';
+    this.tintDecay = 0.009; // ~1.9s from full to nothing
+    // Ten steps, cool to hot, so the shell visibly heats up as the storm nears.
+    this.chargeRamp = [
+      '#00e0ff', '#00f2c8', '#00ff88', '#7bff33', '#d4ff00',
+      '#ffe000', '#ffab00', '#ff6a00', '#ff2600', '#ffffff'
+    ];
+
     // Chain Lightning Storm: charges on orbs, fires on every 10th.
     this.orbCharge = 0;
     this.orbsPerStorm = 10;
@@ -296,6 +309,9 @@ class CircleSurvivalGame {
     this.overdrive = 0;
     this.runOverdrives = 0;
     this.orbCharge = 0;
+    this.tint = 0;
+    this.tintHold = 0;
+    this.tintColor = '#ffffff';
     this.storm = null;
     this.runStorms = 0;
     this.timeScale = 1;
@@ -454,8 +470,8 @@ class CircleSurvivalGame {
       this.engine.spawnDashBurst(this.player.x, this.player.y, this.player.vx, this.player.vy);
 
       // Two rings at different speeds so the bolt reads as a snap, not a bubble.
-      this.engine.spawnShockwave(this.player.x, this.player.y, 80, BOLT_PALETTE, 4);
-      this.engine.spawnShockwave(this.player.x, this.player.y, 150, BOLT_PALETTE, 2);
+      this.engine.spawnShockwave(this.player.x, this.player.y, 80, BOLT_PALETTE, 2);
+      this.engine.spawnShockwave(this.player.x, this.player.y, 150, BOLT_PALETTE, 1);
 
       // Bolts lashing out to whatever is nearby.
       for (let i = this.hazards.length - 1; i >= 0 && i > this.hazards.length - 12; i--) {
@@ -478,8 +494,8 @@ class CircleSurvivalGame {
       if (this.audio) this.audio.playFireBlast();
 
       // Three rings, widening and thinning, so the blast front has depth.
-      this.engine.spawnShockwave(this.player.x, this.player.y, this.player.blastRadius, FIRE_PALETTE, 6);
-      this.engine.spawnShockwave(this.player.x, this.player.y, this.player.blastRadius * 1.7, FIRE_PALETTE, 3);
+      this.engine.spawnShockwave(this.player.x, this.player.y, this.player.blastRadius, FIRE_PALETTE, 3);
+      this.engine.spawnShockwave(this.player.x, this.player.y, this.player.blastRadius * 1.7, FIRE_PALETTE, 2);
       this.engine.spawnShockwave(this.player.x, this.player.y, this.player.blastRadius * 2.4, FIRE_PALETTE, 1);
       this.engine.spawnFireBurst(this.player.x, this.player.y, 160);
       this.engine.spawnPopup(this.player.x, this.player.y - 30, '>> FIRE BLAST <<', '#ffffff', 18);
@@ -487,7 +503,7 @@ class CircleSurvivalGame {
       this.punch({ stop: 7, trauma: 1.0, zoom: 0.11, flash: 0.75, color: '#ff6600' });
       this.engine.spawnLightningBurst(
         this.player.x, this.player.y, 14, this.player.blastRadius * 1.5,
-        FIRE_PALETTE[2], { forks: 3, jitter: 26, width: 3, decay: 0.10 }
+        FIRE_PALETTE[2], { forks: 3, jitter: 26, width: 1.5, decay: 0.10 }
       );
 
       const blastRadiusSq = this.player.blastRadius * this.player.blastRadius;
@@ -552,22 +568,27 @@ class CircleSurvivalGame {
       targets: targets,
       idx: 0,
       hopTimer: 0,
-      hopInterval: 6.5,      // real frames between hops - deliberately slow
+      hopInterval: 3.2,      // real frames between hops
       fromX: this.player.x,
       fromY: this.player.y,
       totalHops: targets.length,
-      tail: 26               // frames to hold after the last hop
+      tail: 18               // frames to hold after the last hop
     };
 
     this.runStorms++;
-    this.timeScaleTarget = 0.18;
+    this.timeScaleTarget = 0.30;
+
+    // Tenth orb: full white-hot shell, held well past a normal pickup.
+    this.tint = 1;
+    this.tintHold = 300;
+    this.tintColor = '#ffffff';
 
     if (this.audio) this.audio.playStormRelease();
     this.punch({ trauma: 0.9, zoom: 0.13, flash: 0.9, color: '#ffffff' });
 
     this.engine.spawnPopup(this.width / 2, this.height * 0.24, 'CHAIN LIGHTNING', '#ffffff', 26);
     for (let i = 0; i < TRI_PALETTE.length; i++) {
-      this.engine.spawnShockwave(this.player.x, this.player.y, 260 + i * 150, [TRI_PALETTE[i], '#ffffff'], 5 - i);
+      this.engine.spawnShockwave(this.player.x, this.player.y, 260 + i * 150, [TRI_PALETTE[i], '#ffffff'], 2.5 - i * 0.5);
     }
   }
 
@@ -597,10 +618,10 @@ class CircleSurvivalGame {
     // The bolt itself. Long decay so the whole chain stays on screen and you
     // can read the path it took.
     this.engine.spawnElectricArc(s.fromX, s.fromY, h.x, h.y, colour, {
-      forks: 4, jitter: 30, width: 4, decay: 0.016
+      forks: 4, jitter: 30, width: 2, decay: 0.020
     });
     this.engine.spawnLightningBurst(h.x, h.y, 5, 70, colour, {
-      forks: 2, jitter: 12, width: 2, decay: 0.05
+      forks: 2, jitter: 12, width: 1, decay: 0.05
     });
 
     this.hazards.splice(i, 1);
@@ -609,7 +630,7 @@ class CircleSurvivalGame {
     this.awardScore(300, h.x, h.y, 'CHAIN', 15);
 
     this.engine.spawnExplosion(h.x, h.y, [colour, '#ffffff'], 26);
-    this.engine.spawnShockwave(h.x, h.y, 110, [colour, '#ffffff'], 3);
+    this.engine.spawnShockwave(h.x, h.y, 110, [colour, '#ffffff'], 1.5);
     this.engine.addTrauma(0.30);
     if (this.glow) this.glow.kick(0.5);
     if (this.audio) this.audio.playChainHop(s.idx, Math.max(1, s.totalHops));
@@ -627,6 +648,7 @@ class CircleSurvivalGame {
       x: margin + Math.random() * (this.width - margin * 2),
       y: margin + Math.random() * (this.height - margin * 2),
       radius: 15,
+      hitR: 17, // pickup radius stays generous even though it draws small
       rot: 0,
       pulse: 0,
       bob: Math.random() * Math.PI * 2,
@@ -649,9 +671,9 @@ class CircleSurvivalGame {
     // Tri-colour detonation: one ring, one burst and one bolt fan per channel.
     for (let i = 0; i < TRI_PALETTE.length; i++) {
       const c = TRI_PALETTE[i];
-      this.engine.spawnShockwave(p.x, p.y, 200 + i * 130, [c, c, '#ffffff'], 6 - i);
+      this.engine.spawnShockwave(p.x, p.y, 200 + i * 130, [c, c, '#ffffff'], 3 - i * 0.5);
       this.engine.spawnStreaks(p.x, p.y, 16, [c, '#ffffff'], 6.0);
-      this.engine.spawnLightningBurst(p.x, p.y, 8, 260, c, { forks: 3, jitter: 26, width: 3, decay: 0.07 });
+      this.engine.spawnLightningBurst(p.x, p.y, 8, 260, c, { forks: 3, jitter: 26, width: 1.5, decay: 0.07 });
     }
   }
 
@@ -673,12 +695,12 @@ class CircleSurvivalGame {
     this.punch({ stop: 12, trauma: 1.0, zoom: 0.20, flash: 1.0, color: '#ff8800' });
 
     for (let s = 0; s < 5; s++) {
-      this.engine.spawnShockwave(x, y, 200 + s * 220, FIRE_PALETTE, 8 - s);
+      this.engine.spawnShockwave(x, y, 200 + s * 220, FIRE_PALETTE, 4 - s * 0.5);
     }
     this.engine.spawnFireBurst(x, y, 260);
     this.engine.spawnStreaks(x, y, 40, FIRE_PALETTE, 7.0);
     this.engine.spawnLightningBurst(x, y, 26, Math.max(this.width, this.height) * 0.6,
-      FIRE_PALETTE[2], { forks: 4, jitter: 44, width: 4, decay: 0.055 });
+      FIRE_PALETTE[2], { forks: 4, jitter: 44, width: 2, decay: 0.055 });
     this.engine.spawnPopup(this.width / 2, this.height * 0.35, 'SUPERNOVA NUKE // ALL ENEMIES VAPORIZED', '#ffffff', 22);
 
     let totalScore = 0;
@@ -803,7 +825,7 @@ class CircleSurvivalGame {
     this.bossWarningTimer = 160;
     if (this.audio) this.audio.playExplosion(true);
     this.punch({ trauma: 0.9, zoom: 0.10, flash: 0.7, color: '#ffffff' });
-    this.engine.spawnShockwave(this.boss.x, this.boss.y, this.boss.radius * 1.3, '#ffffff', 4);
+    this.engine.spawnShockwave(this.boss.x, this.boss.y, this.boss.radius * 1.3, '#ffffff', 2);
     this.engine.spawnPopup(this.width / 2, this.height * 0.22, `!! ${this.boss.title} !!`, '#ffffff', 20);
   }
 
@@ -933,7 +955,7 @@ class CircleSurvivalGame {
             n.destroyed = true;
             this.bumpCombo();
             this.awardScore(400, p.x, p.y, 'NODE DOWN!', 15);
-            this.engine.spawnLightningBurst(p.x, p.y, 6, 120, '#ffffff', { forks: 2, width: 3 });
+            this.engine.spawnLightningBurst(p.x, p.y, 6, 120, '#ffffff', { forks: 2, width: 1.5 });
           }
         }
       }
@@ -1033,7 +1055,7 @@ class CircleSurvivalGame {
 
     if (b.attackTimer >= b.attackInterval) {
       b.attackTimer = 0;
-      this.engine.spawnShockwave(b.x, b.y, b.radius * 0.9, MONO_PALETTE, 4);
+      this.engine.spawnShockwave(b.x, b.y, b.radius * 0.9, MONO_PALETTE, 2);
       if (this.audio) this.audio.playFireBlast();
       for (let i = 0; i < b.arms.length; i++) {
         const a = b.arms[i].angle + b.gyroAngle;
@@ -1041,7 +1063,7 @@ class CircleSurvivalGame {
           b.x, b.y,
           b.x + Math.cos(a) * b.arms[i].length,
           b.y + Math.sin(a) * b.arms[i].length,
-          '#ffffff', { forks: 2, jitter: 14, width: 3, decay: 0.08 }
+          '#ffffff', { forks: 2, jitter: 14, width: 1.5, decay: 0.08 }
         );
       }
     }
@@ -1107,7 +1129,7 @@ class CircleSurvivalGame {
         const p2 = this.matrixNodePos(b, alive[(i + 1) % alive.length]);
         if (alive.length < 2) break;
         this.engine.spawnElectricArc(p1.x, p1.y, p2.x, p2.y, '#c8c8c8',
-          { forks: 1, jitter: 12, width: 2, decay: 0.06 });
+          { forks: 1, jitter: 12, width: 1, decay: 0.06 });
       }
     }
 
@@ -1264,7 +1286,7 @@ class CircleSurvivalGame {
     }
     this.engine.spawnRockShards(bx, by, '#ffffff', 30, 7);
     this.engine.spawnLightningBurst(bx, by, 18, br * 1.3, '#ffffff',
-      { forks: 3, jitter: 30, width: 4, decay: 0.05 });
+      { forks: 3, jitter: 30, width: 2, decay: 0.05 });
     this.engine.spawnPopup(bx, by - 50, `${title} DESTROYED  +5,000`, '#ffffff', 22);
 
     for (let r = 0; r < 6; r++) {
@@ -1340,6 +1362,10 @@ class CircleSurvivalGame {
 
     if (this.player.invuln > 0) this.player.invuln -= dt;
 
+    // Hull tint bleeds back to white unless it is being held.
+    if (this.tintHold > 0) this.tintHold -= dt;
+    else if (this.tint > 0) this.tint = Math.max(0, this.tint - this.tintDecay * dt);
+
     // First-run tutorial beats
     if (this.showHints && this.hintIdx < this.hints.length &&
         this.survivalTime >= this.hints[this.hintIdx].t) {
@@ -1409,8 +1435,8 @@ class CircleSurvivalGame {
         this.player.dashCooldown = 0;
         if (this.audio) this.audio.playDashReady();
         // Recharge = the vessel visibly takes the charge.
-        this.engine.spawnLightningBurst(this.player.x, this.player.y, 9, 78, BOLT_PALETTE[3], { forks: 2, width: 2 });
-        this.engine.spawnShockwave(this.player.x, this.player.y, 70, BOLT_PALETTE, 3);
+        this.engine.spawnLightningBurst(this.player.x, this.player.y, 9, 78, BOLT_PALETTE[3], { forks: 2, width: 1 });
+        this.engine.spawnShockwave(this.player.x, this.player.y, 70, BOLT_PALETTE, 1.5);
         this.engine.spawnPopup(this.player.x, this.player.y - 30, 'DASH READY', '#ffffff', 13);
         this.punch({ trauma: 0.25, zoom: 0.025, flash: 0.22, color: '#00ffff' });
       }
@@ -1421,8 +1447,8 @@ class CircleSurvivalGame {
       if (this.player.blastCooldown <= 0) {
         this.player.blastCooldown = 0;
         if (this.audio) this.audio.playBlastReady();
-        this.engine.spawnLightningBurst(this.player.x, this.player.y, 9, 86, FIRE_PALETTE[2], { forks: 2, width: 2 });
-        this.engine.spawnShockwave(this.player.x, this.player.y, 80, FIRE_PALETTE, 3);
+        this.engine.spawnLightningBurst(this.player.x, this.player.y, 9, 86, FIRE_PALETTE[2], { forks: 2, width: 1 });
+        this.engine.spawnShockwave(this.player.x, this.player.y, 80, FIRE_PALETTE, 1.5);
         this.engine.spawnPopup(this.player.x, this.player.y - 30, 'BLAST READY', '#ffffff', 13);
         this.punch({ trauma: 0.25, zoom: 0.025, flash: 0.22, color: '#ff6600' });
       }
@@ -1444,7 +1470,7 @@ class CircleSurvivalGame {
           this.player.x + Math.cos(a) * r0, this.player.y + Math.sin(a) * r0,
           this.player.x + Math.cos(a + 1.4) * r1, this.player.y + Math.sin(a + 1.4) * r1,
           useBolt ? BOLT_PALETTE[3] : FIRE_PALETTE[2],
-          { forks: 1, jitter: 7, width: 1, decay: 0.22 }
+          { forks: 1, jitter: 7, width: 0.8, decay: 0.22 }
         );
       }
     }
@@ -1483,6 +1509,11 @@ class CircleSurvivalGame {
         this.player.dashCooldown = Math.max(0, this.player.dashCooldown - 35);
         this.player.blastCooldown = Math.max(0, this.player.blastCooldown - 45);
 
+        // Flood the shell with this step's colour.
+        this.tint = 1;
+        this.tintHold = 0;
+        this.tintColor = this.chargeRamp[Math.min(this.chargeRamp.length - 1, this.orbCharge - 1)];
+
         // Pitch climbs with the charge; the 10th resolves and fires the storm.
         if (this.orbCharge >= this.orbsPerStorm) {
           this.orbCharge = 0;
@@ -1491,7 +1522,7 @@ class CircleSurvivalGame {
           if (this.audio) this.audio.playOrbPitch(this.orbCharge, this.orbsPerStorm);
           // Ring pulse gets tighter and brighter as the charge fills.
           const pct = this.orbCharge / this.orbsPerStorm;
-          this.engine.spawnShockwave(this.player.x, this.player.y, 50 + pct * 90, MONO_PALETTE, 1 + pct * 3);
+          this.engine.spawnShockwave(this.player.x, this.player.y, 50 + pct * 90, MONO_PALETTE, 1 + pct * 1.2);
           this.punch({ trauma: 0.1 + pct * 0.25, zoom: 0.012 + pct * 0.04 });
         }
 
@@ -1525,7 +1556,7 @@ class CircleSurvivalGame {
         this.engine.spawnElectricArc(
           this.player.x, this.player.y,
           this.player.x + Math.cos(a) * 46, this.player.y + Math.sin(a) * 46,
-          c, { forks: 1, jitter: 10, width: 2, decay: 0.2 }
+          c, { forks: 1, jitter: 10, width: 1, decay: 0.2 }
         );
       }
     }
@@ -1541,7 +1572,7 @@ class CircleSurvivalGame {
 
       const pdx = this.player.x - p.x;
       const pdy = this.player.y - p.y;
-      const touch = this.player.radius + p.radius;
+      const touch = this.player.radius + (p.hitR || p.radius);
       if (pdx * pdx + pdy * pdy < touch * touch) {
         this.collectPowerup(p);
         this.powerups.splice(i, 1);
@@ -1788,9 +1819,10 @@ class CircleSurvivalGame {
     // screen, and it obeys none of the pixel rules the world does.
     for (let i = 0; i < this.powerups.length; i++) {
       const p = this.powerups[i];
-      const bobY = Math.sin(p.bob) * 4;
+      const bobY = Math.sin(p.bob) * 3;
       const scale = 1 + Math.sin(p.pulse) * 0.10;
-      const R = p.radius * scale;
+      // Deliberately tiny: three small pixels orbiting a point, not a big wheel.
+      const R = p.radius * scale * 0.42;
       // Blink out when it's about to expire.
       const dying = p.lifetime < 180 && Math.floor(p.lifetime / 6) % 2 === 0;
 
@@ -1801,7 +1833,7 @@ class CircleSurvivalGame {
 
       // Three chunky pixels on the corners of a triangle, spinning as a unit.
       // Nothing in the middle - the centre stays empty on purpose.
-      const px3 = Math.max(4, Math.floor(R * 0.42));
+      const px3 = Math.max(2, Math.floor(R * 0.55));
       for (let c = 0; c < 3; c++) {
         const a = p.rot + (c * Math.PI * 2) / 3;
         const cx = Math.cos(a) * R;
@@ -1810,7 +1842,7 @@ class CircleSurvivalGame {
 
         // Glow under each pixel.
         ctx.globalAlpha = (dying ? 0.3 : 1) * 0.65;
-        ctx.drawImage(this.engine.getGlow(col), cx - px3 * 2, cy - px3 * 2, px3 * 4, px3 * 4);
+        ctx.drawImage(this.engine.getGlow(col), cx - px3 * 1.6, cy - px3 * 1.6, px3 * 3.2, px3 * 3.2);
 
         // Hard pixel on top.
         ctx.globalAlpha = dying ? 0.3 : 1;
@@ -2088,64 +2120,92 @@ class CircleSurvivalGame {
         ctx.fillRect(r + 4, r + 4, 3, 3);
       }
 
-      // B. HULL - a swept interceptor, nose along travel direction.
-      // The old design was a circle with a crosshair, which read as a ball
-      // rather than as a ship and had a white pip stuck in the middle.
+      // B. HULL - an orb whose shell carries the charge colour.
+      // Every orb eaten floods the shell; it bleeds back to white on its own,
+      // so how lit up you are is a live readout of the storm charge.
       const moving = Math.hypot(this.player.vx, this.player.vy) > 0.5;
       const heading = moving
         ? Math.atan2(this.player.vy, this.player.vx)
         : this.player.facingAngle;
 
-      ctx.save();
-      ctx.rotate(heading);
-
+      const tinted = this.tint > 0.01;
       const edge = this.player.isDashing ? '#00ffff' : '#ffffff';
 
-      // Engine flare, behind the hull, scaled by throttle.
-      if (moving) {
-        const thrust = Math.min(1, Math.hypot(this.player.vx, this.player.vy) / 6);
-        const flare = this.engine.getGlow(this.player.isDashing ? '#00e0ff' : '#ffffff');
-        const fw = r * (1.4 + thrust * 1.9);
+      // Charge aura, strongest right after a pickup.
+      if (tinted) {
         ctx.save();
         ctx.globalCompositeOperation = 'lighter';
-        ctx.globalAlpha = 0.5 + thrust * 0.5;
-        ctx.drawImage(flare, -r * 1.5 - fw / 2, -fw / 2, fw, fw);
+        ctx.globalAlpha = this.tint * 0.55;
+        const aw = r * (3.0 + this.tint * 1.2);
+        ctx.drawImage(this.engine.getGlow(this.tintColor), -aw / 2, -aw / 2, aw, aw);
         ctx.restore();
       }
 
+      // Thruster plume opposite the heading.
+      if (moving) {
+        const thrust = Math.min(1, Math.hypot(this.player.vx, this.player.vy) / 6);
+        ctx.save();
+        ctx.rotate(heading);
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.globalAlpha = 0.35 + thrust * 0.45;
+        const fw = r * (1.0 + thrust * 1.3);
+        ctx.drawImage(
+          this.engine.getGlow(this.player.isDashing ? '#00e0ff' : '#ffffff'),
+          -r * 1.3 - fw / 2, -fw / 2, fw, fw
+        );
+        ctx.restore();
+      }
+
+      // Shell.
       ctx.fillStyle = '#000000';
       ctx.strokeStyle = edge;
       ctx.lineWidth = 2;
-      ctx.lineJoin = 'miter';
-
-      // Main delta hull.
       ctx.beginPath();
-      ctx.moveTo(r * 1.45, 0);            // nose
-      ctx.lineTo(r * 0.1, -r * 0.62);     // shoulder
-      ctx.lineTo(-r * 0.95, -r * 0.85);   // port wingtip
-      ctx.lineTo(-r * 0.55, 0);           // engine notch
-      ctx.lineTo(-r * 0.95, r * 0.85);    // starboard wingtip
-      ctx.lineTo(r * 0.1, r * 0.62);
-      ctx.closePath();
+      ctx.arc(0, 0, r, 0, Math.PI * 2);
       ctx.fill();
       ctx.stroke();
 
-      // Spine + canopy slit. A slit, not a dot.
-      ctx.fillStyle = edge;
-      ctx.fillRect(Math.floor(r * 0.15), -1, Math.floor(r * 0.75), 2);
-      ctx.fillRect(Math.floor(-r * 0.1), -3, 3, 6);
+      // Charge overlay on the shell itself.
+      if (tinted) {
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.globalAlpha = this.tint;
+        ctx.strokeStyle = this.tintColor;
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(0, 0, r, 0, Math.PI * 2);
+        ctx.stroke();
 
-      // Wing strakes.
-      ctx.lineWidth = 1;
-      ctx.strokeStyle = edge;
-      ctx.beginPath();
-      ctx.moveTo(-r * 0.75, -r * 0.66);
-      ctx.lineTo(r * 0.0, -r * 0.34);
-      ctx.moveTo(-r * 0.75, r * 0.66);
-      ctx.lineTo(r * 0.0, r * 0.34);
-      ctx.stroke();
+        // Inner band fills as the charge nears full.
+        ctx.globalAlpha = this.tint * 0.8;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(0, 0, r * 0.6, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+      }
 
+      // Counter-rotating shell plates - keeps the orb from reading as a
+      // featureless ball, with nothing at the centre.
+      ctx.save();
+      ctx.rotate(this.player.rotAngle);
+      ctx.strokeStyle = tinted ? this.tintColor : edge;
+      ctx.lineWidth = 2;
+      for (let q = 0; q < 3; q++) {
+        const a0 = (q * Math.PI * 2) / 3;
+        ctx.beginPath();
+        ctx.arc(0, 0, r * 0.72, a0, a0 + 0.9);
+        ctx.stroke();
+      }
       ctx.restore();
+
+      // Heading pip on the rim, so travel direction is still readable.
+      ctx.save();
+      ctx.rotate(heading);
+      ctx.fillStyle = edge;
+      ctx.fillRect(Math.floor(r - 3), -2, 5, 4);
+      ctx.restore();
+
       ctx.restore();
     }
 
