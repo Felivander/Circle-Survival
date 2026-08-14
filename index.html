@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>ASTRAL VOID | Circle Survival</title>
+  <meta name="description" content="Survive within a quantum circular containment field as cosmic meteors and plasma seekers converge from deep space. Standalone arcade survival with leaderboards, fire blast, and dash mechanics.">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect x='8' y='8' width='84' height='84' fill='%23000' stroke='%23fff' stroke-width='9'/></svg>">
+</head>
+<body>
+
+  <!-- 1-Bit Monochrome Pixel Canvas -->
+  <canvas id="survivalCanvas"></canvas>
+
+  <!-- Top Right HUD Controls -->
+  <nav class="top-hud-bar" aria-label="Game Controls">
+    <button id="btnPauseHUD" class="hud-btn" aria-label="Pause Game">PAUSE [ESC]</button>
+    <button id="btnOpenLeaderboard" class="hud-btn" aria-label="Leaderboard">RANKINGS</button>
+    <button id="btnOpenStats" class="hud-btn" aria-label="Lifetime Stats">STATS</button>
+  </nav>
+
+  <!-- 1. Start / Game Over Overlay -->
+  <div id="survivalOverlay" class="modal-overlay">
+    <div class="modal-card">
+      <h1 id="overlayTitle" class="modal-title">CIRCLE SURVIVAL</h1>
+      <p class="modal-subtitle">Containment Breach in Deep Space. Survive within the core field.</p>
+
+      <div class="stat-row">
+        <span>RUN SCORE:</span>
+        <b id="overlayScore" style="font-size: 22px;">0</b>
+      </div>
+      <div class="stat-row">
+        <span>SURVIVAL TIME:</span>
+        <b id="overlayTime" style="font-size: 20px;">0.00s</b>
+      </div>
+      <div class="stat-row">
+        <span>BEST COMBO:</span>
+        <b id="overlayCombo" style="font-size: 20px;">x1</b>
+      </div>
+      <div class="stat-row">
+        <span>ORBITAL RANK:</span>
+        <b id="overlayRank" style="font-size: 16px;">#-- (UNRANKED)</b>
+      </div>
+      <div class="stat-row">
+        <span>PERSONAL BEST:</span>
+        <b id="overlayPB" style="color: #fff;">0</b>
+      </div>
+
+      <button id="btnStartAction" class="btn-survival-primary" onclick="window.circleGame.startNewGame()">
+        START RUN (SPACE)
+      </button>
+
+      <div class="controls-hint">
+        <b>WASD / ARROWS:</b> Move &amp; counter-strafe (tap the opposite key to brake hard)<br>
+        <b>SPACE:</b> Dash — invulnerable, smashes rocks &bull; <b>SHIFT:</b> Fire Blast — clears the area<br>
+        <b>GRAZE:</b> Skim past a rock to score and raise your <b>COMBO</b>. Everything scores &times; combo.<br>
+        <b>SHIELD:</b> Eats one hit. Refills every 5 diamonds.<br>
+        <b>STORM:</b> Every 10th diamond fires <b>CHAIN LIGHTNING</b> — time crawls and a bolt walks
+        through up to 20 enemies. Listen for the pitch climbing.<br>
+        <b>POWERUP:</b> Drops every 1000 points. Grants <b>OVERDRIVE</b>: free dashes, 5&times; blast recharge.<br>
+        <b>F:</b> Toggle glow.
+      </div>
+
+      <div style="display: flex; gap: 10px; justify-content: center; margin-top: 16px; flex-wrap: wrap;">
+        <button class="btn-survival-secondary" onclick="window.circleGame.openLeaderboard()">LEADERBOARD</button>
+        <button class="btn-survival-secondary" onclick="window.circleGame.openStats()">TELEMETRY</button>
+        <a href="../arcade.html" class="btn-survival-secondary">100 GAMES PORTAL</a>
+        <a href="../index.html" class="btn-survival-secondary">NEO-SNAKE</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. Pause Modal -->
+  <div id="pauseModal" class="modal-overlay hidden">
+    <div class="modal-card">
+      <h2 class="modal-title">MISSION PAUSED</h2>
+      <p class="modal-subtitle">Tactical simulation suspended. Telemetry on hold.</p>
+
+      <button id="btnResumeGame" class="btn-survival-primary">RESUME FLIGHT (ESC / P)</button>
+      <button id="btnRestartPause" class="btn-survival-secondary" style="width: 100%; margin-top: 10px; justify-content: center;">RESTART RUN (R)</button>
+      <button id="btnQuitPause" class="btn-survival-secondary" style="width: 100%; margin-top: 10px; justify-content: center;">MAIN MENU</button>
+    </div>
+  </div>
+
+  <!-- 3. Leaderboard Modal -->
+  <div id="leaderboardModal" class="modal-overlay hidden">
+    <div class="modal-card leaderboard-modal-card">
+      <h2 class="modal-title">ORBITAL LEADERBOARD</h2>
+      <p class="modal-subtitle">Elite survival rankings across the deep space quadrant.</p>
+
+      <div class="player-name-wrapper">
+        <span>PILOT CODENAME:</span>
+        <input type="text" id="playerNameInput" class="player-name-input" maxlength="16" placeholder="Enter Call-Sign">
+      </div>
+
+      <div class="leaderboard-table-header">
+        <div>#</div>
+        <div>PILOT & TIER</div>
+        <div>TIME</div>
+        <div class="lb-grazes">GRAZES</div>
+        <div style="text-align: right;">SCORE</div>
+      </div>
+
+      <div id="leaderboardRowsContainer" class="leaderboard-scroll-area">
+        <!-- Rendered by SurvivalLeaderboard -->
+      </div>
+
+      <button id="btnCloseLeaderboard" class="btn-survival-primary" style="margin-top: 0;">CLOSE (ESC)</button>
+    </div>
+  </div>
+
+  <!-- 4. Lifetime Stats Modal -->
+  <div id="statsModal" class="modal-overlay hidden">
+    <div class="modal-card">
+      <h2 class="modal-title">FLIGHT TELEMETRY</h2>
+      <p class="modal-subtitle">Lifetime pilot metrics and combat statistics.</p>
+
+      <div class="stats-grid">
+        <div class="stat-box">
+          <div class="stat-title">HIGH SCORE</div>
+          <div id="stHighScore" class="stat-val">0</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-title">LONGEST RUN</div>
+          <div id="stBestTime" class="stat-val">0.0s</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-title">TOTAL MISSIONS</div>
+          <div id="stTotalRuns" class="stat-val">0</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-title">TOTAL GRAZES</div>
+          <div id="stTotalGrazes" class="stat-val" style="color: #30d158;">0</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-title">ENEMIES VAPORIZED</div>
+          <div id="stTotalVaporized" class="stat-val" >0</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-title">DASHES EXECUTED</div>
+          <div id="stTotalDashes" class="stat-val" >0</div>
+        </div>
+      </div>
+
+      <button id="btnCloseStats" class="btn-survival-primary" style="margin-top: 0;">CLOSE (ESC)</button>
+    </div>
+  </div>
+
+  <!-- Standalone Game Scripts -->
+  <script src="js/audio.js"></script>
+  <script src="js/space-bg.js"></script>
+  <script src="js/engine.js"></script>
+  <script src="js/glow.js"></script>
+  <script src="js/leaderboard.js"></script>
+  <script src="js/game.js"></script>
+</body>
+</html>

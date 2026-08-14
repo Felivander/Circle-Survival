@@ -1,0 +1,339 @@
+/* ==========================================================================
+   1-BIT PIXEL ART BLACK & WHITE ENGINE STYLES
+   Pure Monochrome Retro Aesthetic (0 Gradients, Pure Black & White)
+   ========================================================================== */
+
+:root {
+  --color-bg: #000000;
+  --color-fg: #ffffff;
+  --color-dim: #888888;
+  --color-dark: #222222;
+  --font-pixel: 'Courier New', Courier, monospace;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  user-select: none;
+  -webkit-user-select: none;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+body {
+  background-color: var(--color-bg);
+  color: var(--color-fg);
+  font-family: var(--font-pixel);
+  overflow: hidden;
+  height: 100vh;
+  width: 100vw;
+  text-transform: uppercase;
+}
+
+/* ---------------- 1-BIT PIXEL CANVAS ---------------- */
+canvas#survivalCanvas {
+  display: block;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 1;
+  background: var(--color-bg);
+  cursor: crosshair;
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: crisp-edges;
+}
+
+/* ---------------- GLOW / BLOOM OVERLAY ---------------- */
+canvas#glowOverlay {
+  display: block;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 2;
+  pointer-events: none;
+}
+
+/* ---------------- TOP HUD NAVBAR ---------------- */
+.top-hud-bar {
+  position: absolute;
+  top: 14px;
+  right: 20px;
+  display: flex;
+  gap: 8px;
+  z-index: 50;
+}
+
+.hud-btn {
+  background: var(--color-bg);
+  border: 2px solid var(--color-fg);
+  color: var(--color-fg);
+  font-family: var(--font-pixel);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  padding: 6px 12px;
+  border-radius: 0;
+  cursor: pointer;
+  box-shadow: 2px 2px 0px var(--color-fg);
+  transition: transform 0.05s, box-shadow 0.05s;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.hud-btn:hover {
+  background: var(--color-fg);
+  color: var(--color-bg);
+}
+
+.hud-btn:active {
+  transform: translate(2px, 2px);
+  box-shadow: 0px 0px 0px var(--color-fg);
+}
+
+/* ---------------- 1-BIT RETRO MODALS ---------------- */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.modal-overlay.hidden {
+  display: none !important;
+}
+
+.modal-card {
+  background: var(--color-bg);
+  border: 2px solid var(--color-fg);
+  padding: 32px 36px;
+  max-width: 480px;
+  width: 90%;
+  text-align: center;
+  box-shadow: 6px 6px 0px var(--color-fg);
+  position: relative;
+  border-radius: 0;
+}
+
+.modal-title {
+  font-family: var(--font-pixel);
+  font-size: 26px;
+  font-weight: 900;
+  letter-spacing: 3px;
+  color: var(--color-fg);
+  margin-bottom: 8px;
+  border-bottom: 2px solid var(--color-fg);
+  padding-bottom: 8px;
+}
+
+.modal-subtitle {
+  font-size: 11px;
+  letter-spacing: 1px;
+  color: var(--color-dim);
+  margin-bottom: 20px;
+  line-height: 1.5;
+}
+
+.stat-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  margin-bottom: 6px;
+  background: var(--color-bg);
+  border: 1px solid var(--color-fg);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+
+.btn-survival-primary {
+  width: 100%;
+  background: var(--color-fg);
+  color: var(--color-bg);
+  border: 2px solid var(--color-fg);
+  padding: 12px 20px;
+  font-family: var(--font-pixel);
+  font-size: 14px;
+  font-weight: 900;
+  letter-spacing: 2px;
+  margin-top: 20px;
+  cursor: pointer;
+  box-shadow: 4px 4px 0px var(--color-dim);
+  transition: transform 0.05s, box-shadow 0.05s;
+  border-radius: 0;
+}
+
+.btn-survival-primary:hover {
+  background: var(--color-bg);
+  color: var(--color-fg);
+  box-shadow: 4px 4px 0px var(--color-fg);
+}
+
+.btn-survival-primary:active {
+  transform: translate(3px, 3px);
+  box-shadow: 0px 0px 0px var(--color-fg);
+}
+
+.btn-survival-secondary {
+  background: var(--color-bg);
+  color: var(--color-fg);
+  border: 1px solid var(--color-fg);
+  padding: 8px 14px;
+  font-family: var(--font-pixel);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-decoration: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  box-shadow: 2px 2px 0px var(--color-fg);
+  transition: transform 0.05s;
+  border-radius: 0;
+}
+
+.btn-survival-secondary:hover {
+  background: var(--color-fg);
+  color: var(--color-bg);
+}
+
+.btn-survival-secondary:active {
+  transform: translate(2px, 2px);
+  box-shadow: 0px 0px 0px var(--color-fg);
+}
+
+.controls-hint {
+  margin-top: 18px;
+  padding: 10px 14px;
+  background: var(--color-bg);
+  border: 1px dashed var(--color-dim);
+  font-size: 10px;
+  color: var(--color-fg);
+  line-height: 1.6;
+  text-align: left;
+  letter-spacing: 0.5px;
+}
+
+/* ---------------- LEADERBOARD MODAL ---------------- */
+.leaderboard-modal-card {
+  max-width: 580px;
+}
+
+.player-name-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+  padding: 8px 12px;
+  background: var(--color-bg);
+  border: 1px solid var(--color-fg);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.player-name-input {
+  background: var(--color-bg);
+  border: 1px solid var(--color-fg);
+  color: var(--color-fg);
+  font-family: var(--font-pixel);
+  font-size: 13px;
+  font-weight: 700;
+  padding: 4px 8px;
+  text-align: center;
+  outline: none;
+  border-radius: 0;
+  text-transform: uppercase;
+}
+
+.player-name-input:focus {
+  background: var(--color-fg);
+  color: var(--color-bg);
+}
+
+.leaderboard-table-header {
+  display: grid;
+  grid-template-columns: 35px 1fr 70px 70px 90px;
+  gap: 8px;
+  padding: 6px 10px;
+  background: var(--color-fg);
+  color: var(--color-bg);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 1px;
+  margin-bottom: 6px;
+}
+
+.leaderboard-scroll-area {
+  max-height: 240px;
+  overflow-y: auto;
+  margin-bottom: 16px;
+}
+
+.leaderboard-scroll-area::-webkit-scrollbar {
+  width: 6px;
+}
+
+.leaderboard-scroll-area::-webkit-scrollbar-track {
+  background: var(--color-bg);
+}
+
+.leaderboard-scroll-area::-webkit-scrollbar-thumb {
+  background: var(--color-fg);
+}
+
+.lb-row {
+  display: grid;
+  grid-template-columns: 35px 1fr 70px 70px 90px;
+  gap: 8px;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--color-dark);
+  font-size: 11px;
+  font-weight: 700;
+  align-items: center;
+}
+
+.lb-row.current-pilot {
+  border: 1px solid var(--color-fg);
+  background: var(--color-dark);
+}
+
+/* ---------------- STATS GRID ---------------- */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.stat-box {
+  background: var(--color-bg);
+  border: 1px solid var(--color-fg);
+  padding: 10px;
+  text-align: center;
+}
+
+.stat-title {
+  font-size: 9px;
+  color: var(--color-dim);
+  letter-spacing: 1px;
+  margin-bottom: 4px;
+}
+
+.stat-val {
+  font-size: 18px;
+  font-weight: 900;
+  color: var(--color-fg);
+}
