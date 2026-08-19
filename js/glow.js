@@ -32,7 +32,7 @@ class GlowPost {
     this.height = 0;
 
     this.enabled = true;
-    this.bloomStrength = 0.65;
+    this.bloomStrength = 0.30;
 
     // Pumped by big hits; drives the chromatic split and extra bloom.
     this.intensity = 0;
@@ -93,20 +93,20 @@ class GlowPost {
 
     // Shrink the frame, blur it, add it back as light.
     this.bloomCtx.clearRect(0, 0, this.bloom.width, this.bloom.height);
-    this.bloomCtx.filter = 'blur(2px)';
+    this.bloomCtx.filter = 'blur(1px)';
     this.bloomCtx.drawImage(this.src, 0, 0, this.bloom.width, this.bloom.height);
     this.bloomCtx.filter = 'none';
 
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';
     ctx.imageSmoothingEnabled = true;
-    ctx.globalAlpha = this.bloomStrength + this.intensity * 0.25;
+    ctx.globalAlpha = this.bloomStrength + this.intensity * 0.12;
     ctx.drawImage(this.bloom, 0, 0, w, h);
 
     // Chromatic split on impact: the red and cyan channels pull apart.
     if (this.intensity > 0.02) {
-      const off = this.intensity * 7;
-      const a = Math.min(0.5, this.intensity * 0.4);
+      const off = this.intensity * 4;
+      const a = Math.min(0.28, this.intensity * 0.22);
       this._channel(ctx, '#ff0000', -off, a);
       this._channel(ctx, '#00ffff', off, a);
     }

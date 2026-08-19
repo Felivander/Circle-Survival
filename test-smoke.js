@@ -110,7 +110,35 @@ assert.strictEqual(g.shield, 0, 'shield did not absorb the hit');
 assert.strictEqual(g.state, 'PLAYING', 'shielded hit should not end the run');
 g.player.invuln = 0;
 g.hitPlayer();
-assert.strictEqual(g.state, 'GAMEOVER', 'second hit should end the run');
+assert.strictEqual(g.state, 'DYING', 'second hit should start the death cam');
+
+// ---- death cam plays, then hands over to the score screen ----
+assert.ok(g.timeScaleTarget < 0.5, 'death cam did not engage slow motion');
+let deathGuard = 0;
+while (g.state === 'DYING' && deathGuard++ < 2000) g.updateDeath(1);
+assert.ok(deathGuard < 2000, 'death cam never finished');
+assert.strictEqual(g.state, 'GAMEOVER', 'death cam did not reach the score screen');
+assert.strictEqual(g.timeScaleTarget, 1, 'death cam left the game in slow motion');
+assert.ok(deathGuard > 60, `death cam too short to read: ${deathGuard} frames`);
+
+// Skipping early is allowed, but only after the sequence has played a beat.
+g.startNewGame();
+g.shield = 0;
+g.player.invuln = 0;
+g.hitPlayer();
+assert.strictEqual(g.state, 'DYING');
+g.finalizeGameOver();
+assert.strictEqual(g.state, 'GAMEOVER', 'could not skip the death cam');
+
+// A storm in flight must not outlive the player, or its dim overlay sticks.
+g.startNewGame();
+g.player.invuln = 0;
+g.shield = 0;
+for (let i = 0; i < 8; i++) g.spawnEdgeHazard();
+g.triggerChainStorm();
+assert.ok(g.storm, 'storm did not start');
+g.hitPlayer();
+assert.strictEqual(g.storm, null, 'storm survived the player death');
 
 // ---- chain lightning storm ----
 g.startNewGame();

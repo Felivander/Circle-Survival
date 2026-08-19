@@ -72,6 +72,15 @@ class CircleSurvivalGame {
     // Hull tint. Each orb floods the shell with colour that then bleeds back
     // to white, so how lit-up you are IS the charge meter - the HUD pips are
     // just a readout of something you can already feel.
+    // Ribbon of recent hull positions, drawn as the blue dash trace.
+    this.dashTrail = [];
+
+    // Death cam.
+    this.deathTimer = 0;
+    this.deathBurst = 0;
+    this.deathX = 0;
+    this.deathY = 0;
+
     this.tint = 0;          // 0..1 intensity
     this.tintHold = 0;      // frames to hold at full before decaying
     this.tintColor = '#ffffff';
@@ -191,6 +200,13 @@ class CircleSurvivalGame {
 
       this.keys[e.code] = true;
 
+      // Let an impatient player cut the death cam short, but not so early
+      // that a key held at the moment of death skips it outright.
+      if (this.state === 'DYING' && this.deathTimer > 35) {
+        this.finalizeGameOver();
+        return;
+      }
+
       if (e.code === 'Space') {
         if (this.state === 'MENU' || this.state === 'GAMEOVER') {
           this.startNewGame();
@@ -309,6 +325,8 @@ class CircleSurvivalGame {
     this.overdrive = 0;
     this.runOverdrives = 0;
     this.orbCharge = 0;
+    this.deathTimer = 0;
+    this.dashTrail = [];
     this.tint = 0;
     this.tintHold = 0;
     this.tintColor = '#ffffff';
@@ -452,7 +470,10 @@ class CircleSurvivalGame {
     if (this.state !== 'PLAYING') return;
     if (this.player.dashCooldown <= 0) {
       this.player.isDashing = true;
-      this.player.dashDuration = 14;
+      // Longer window at a higher speed: the dash now covers real distance,
+      // enough to cross a cluster rather than nudge past one rock.
+      this.player.dashDuration = 20;
+      this.dashTrail = [];
       this.player.dashCooldown = this.player.dashMaxCooldown;
       this.runDashes++;
 
@@ -462,7 +483,7 @@ class CircleSurvivalGame {
         moveAngle = Math.atan2(this.player.vy, this.player.vx);
       }
 
-      const dashSpeed = 15.0;
+      const dashSpeed = 24.0;
       this.player.vx = Math.cos(moveAngle) * dashSpeed;
       this.player.vy = Math.sin(moveAngle) * dashSpeed;
 
@@ -1310,6 +1331,7 @@ class CircleSurvivalGame {
 
     // The storm runs on real frames while the world around it crawls.
     if (this.storm && this.state === 'PLAYING') this.updateStorm(rawDt);
+    if (this.state === 'DYING') this.updateDeath(rawDt);
 
     this.glow.update(rawDt);
     this.update(rawDt * this.timeScale);
@@ -1424,7 +1446,16 @@ class CircleSurvivalGame {
     if (this.player.isDashing) {
       this.player.dashDuration -= dt;
       this.engine.spawnTrail(this.player.x, this.player.y, BOLT_PALETTE, 3);
+      // Record the ribbon path while dashing.
+      this.dashTrail.push({ x: this.player.x, y: this.player.y, life: 1 });
+      if (this.dashTrail.length > 26) this.dashTrail.shift();
       if (this.player.dashDuration <= 0) this.player.isDashing = false;
+    }
+
+    // The ribbon keeps fading after the dash ends, so it reads as a wake.
+    for (let i = this.dashTrail.length - 1; i >= 0; i--) {
+      this.dashTrail[i].life -= 0.055 * dt;
+      if (this.dashTrail[i].life <= 0) this.dashTrail.splice(i, 1);
     }
 
     // Overdrive melts cooldowns: dash is free, blast recharges 5x.
@@ -1676,14 +1707,70 @@ class CircleSurvivalGame {
     }
   }
 
+  /**
+   * Death is a sequence, not an instant menu. The run ends, time crawls, the
+   * camera pushes in on the wreck and the hull comes apart over ~2.5s before
+   * the score screen appears. Slamming the overlay up on the same frame as the
+   * hit gave you no moment to register what killed you.
+   */
   triggerGameOver() {
-    this.state = 'GAMEOVER';
+    if (this.state !== 'PLAYING') return;
+    this.state = 'DYING';
+    this.deathTimer = 0;
+    this.deathBurst = 0;
+    this.deathX = this.player.x;
+    this.deathY = this.player.y;
+
+    this.storm = null;
+    this.timeScaleTarget = 0.12;
     if (this.audio) this.audio.playExplosion(true);
-    this.engine.addTrauma(0.95);
-    this.screenFlash = 0.8;
-    this.screenFlashColor = '#ffffff';
-    this.hitStop = 6;
-    this.engine.spawnExplosion(this.player.x, this.player.y, MONO_PALETTE, 40);
+    this.punch({ stop: 8, trauma: 1.0, flash: 0.9, color: '#ffffff' });
+
+    // Opening blast.
+    this.engine.spawnExplosion(this.deathX, this.deathY, MONO_PALETTE, 60);
+    this.engine.spawnStreaks(this.deathX, this.deathY, 26, MONO_PALETTE, 6.0);
+    this.engine.spawnShockwave(this.deathX, this.deathY, 220, MONO_PALETTE, 3);
+    this.engine.spawnLightningBurst(this.deathX, this.deathY, 12, 200, ARC_COLOR,
+      { forks: 3, jitter: 24, width: 1.5, decay: 0.05 });
+  }
+
+  /**
+   * Death cam. Runs on RAW frames so its pacing is independent of the
+   * slow-motion it just engaged.
+   */
+  updateDeath(rawDt) {
+    this.deathTimer += rawDt;
+
+    // Slow, continuous push-in on the wreck.
+    this.zoomPunch = Math.min(0.34, this.zoomPunch + 0.0055 * rawDt);
+
+    // Secondary detonations, thinning out as the sequence settles.
+    this.deathBurst -= rawDt;
+    if (this.deathBurst <= 0 && this.deathTimer < 110) {
+      this.deathBurst = 12 + Math.random() * 14;
+      const a = Math.random() * Math.PI * 2;
+      const d = 10 + Math.random() * 46;
+      const bx = this.deathX + Math.cos(a) * d;
+      const by = this.deathY + Math.sin(a) * d;
+      this.engine.spawnExplosion(bx, by, MONO_PALETTE, 22);
+      this.engine.spawnShockwave(bx, by, 90, MONO_PALETTE, 2);
+      if (this.audio) this.audio.playExplosion(false);
+      this.engine.addTrauma(0.4);
+    }
+
+    // Final flash, then the score screen.
+    if (this.deathTimer >= 150) {
+      this.engine.spawnExplosion(this.deathX, this.deathY, MONO_PALETTE, 70);
+      this.engine.spawnShockwave(this.deathX, this.deathY, 420, MONO_PALETTE, 2);
+      this.finalizeGameOver();
+    }
+  }
+
+  finalizeGameOver() {
+    if (this.state !== 'DYING') return;
+    this.state = 'GAMEOVER';
+    this.timeScaleTarget = 1;
+    this.zoomPunch = 0;
 
     const recordResult = this.leaderboard.recordRun(
       this.score,
@@ -2132,6 +2219,32 @@ class CircleSurvivalGame {
 
       const tinted = this.tint > 0.01;
       const edge = this.player.isDashing ? '#00ffff' : '#ffffff';
+
+      // Blue dash trace: a tapering ribbon through the recorded path, drawn
+      // in hull space so it lines up exactly with where the orb has been.
+      if (this.dashTrail.length > 1) {
+        ctx.save();
+        ctx.translate(-px, -py);
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+
+        for (let pass = 0; pass < 2; pass++) {
+          ctx.strokeStyle = pass === 0 ? '#0058ff' : '#00e0ff';
+          for (let t = 1; t < this.dashTrail.length; t++) {
+            const a = this.dashTrail[t - 1];
+            const b = this.dashTrail[t];
+            const age = t / this.dashTrail.length; // 0 oldest -> 1 newest
+            ctx.globalAlpha = b.life * age * (pass === 0 ? 0.35 : 0.8);
+            ctx.lineWidth = (pass === 0 ? r * 1.5 : r * 0.55) * age;
+            ctx.beginPath();
+            ctx.moveTo(a.x, a.y);
+            ctx.lineTo(b.x, b.y);
+            ctx.stroke();
+          }
+        }
+        ctx.restore();
+      }
 
       // Charge aura, strongest right after a pickup.
       if (tinted) {

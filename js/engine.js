@@ -26,6 +26,11 @@ const TRI_PALETTE = ['#ff0044', '#00ff66', '#00aaff'];
 // reserved for powers alone, so seeing colour always means "this is yours".
 const MONO_PALETTE = ['#ffffff', '#dcdcdc', '#b4b4b4', '#8c8c8c', '#646464', '#3c3c3c', '#1e1e1e'];
 
+// Lightning has exactly one look: cyan body, white-hot core. Every arc uses
+// it regardless of what spawned it, so electricity always reads as electricity.
+const ARC_COLOR = '#00e0ff';
+const ARC_CORE = '#ffffff';
+
 /** Ramps are arrays; a plain string is used as-is. */
 function pickColor(c) {
   if (Array.isArray(c)) return c[(Math.random() * c.length) | 0];
@@ -76,7 +81,8 @@ class SurvivalEngine {
     // Pure saturated colour all the way to the centre. A white core here was
     // what put a white dot in the middle of every single effect and asset.
     grad.addColorStop(0.00, color);
-    grad.addColorStop(0.40, color + 'aa');
+    grad.addColorStop(0.28, color + '99');
+    grad.addColorStop(0.65, color + '33');
     grad.addColorStop(1.00, color + '00');
     c.fillStyle = grad;
     c.fillRect(0, 0, S, S);
@@ -451,9 +457,9 @@ class SurvivalEngine {
       const c = sw.ramp ? rampColor(sw.ramp, sw.life, 0) : sw.color;
 
       // Soft wide halo under the ring.
-      ctx.globalAlpha = sw.life * 0.15;
+      ctx.globalAlpha = sw.life * 0.10;
       ctx.strokeStyle = c;
-      ctx.lineWidth = sw.thickness * 1.8;
+      ctx.lineWidth = sw.thickness * 1.3;
       ctx.beginPath();
       ctx.arc(sw.x, sw.y, sw.radius, 0, Math.PI * 2);
       ctx.stroke();
@@ -506,12 +512,12 @@ class SurvivalEngine {
     for (let i = 0; i < this.electricArcs.length; i++) {
       const arc = this.electricArcs[i];
 
-      // Two soft glow passes for the coloured haze, then a hard stepped pixel
-      // core stamped as squares along the path so the bolt reads as pixel art.
-      ctx.strokeStyle = arc.color;
+      // Electricity is ALWAYS cyan with a white core, whatever spawned it.
+      // A bolt tinted to match its source stopped reading as electricity.
+      ctx.strokeStyle = ARC_COLOR;
       for (let pass = 0; pass < 2; pass++) {
-        ctx.globalAlpha = pass === 0 ? arc.life * 0.16 : arc.life * 0.45;
-        ctx.lineWidth = pass === 0 ? arc.width * 3.5 : arc.width * 1.4;
+        ctx.globalAlpha = pass === 0 ? arc.life * 0.10 : arc.life * 0.38;
+        ctx.lineWidth = pass === 0 ? arc.width * 2.2 : arc.width * 1.2;
         for (let b = 0; b < arc.branches.length; b++) {
           const pts = arc.branches[b];
           ctx.beginPath();
@@ -521,9 +527,9 @@ class SurvivalEngine {
         }
       }
 
-      // Pixel core: march each segment and stamp blocks.
+      // White-hot pixel core: march each segment and stamp blocks.
       ctx.globalAlpha = arc.life;
-      ctx.fillStyle = arc.color;
+      ctx.fillStyle = ARC_CORE;
       const bs = Math.max(1, Math.round(arc.width * 0.55));
       for (let b = 0; b < arc.branches.length; b++) {
         const pts = arc.branches[b];
